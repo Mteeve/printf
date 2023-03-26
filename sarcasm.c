@@ -1,133 +1,61 @@
-#include <stdarg.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <inttypes.h>
 #include "main.h"
 
-int _printf(const char *format, ...)
+/**
+ * handle_print - Prints an argument based on type
+ * @fmt: Formatted string to print the arguments
+ * @list: List arguments to be printed
+ * @ind: ind.
+ * @buffer: Buffer array to handle print
+ * @flags: Calculates active flags
+ * @width: gets width
+ * @precision: Precision specification
+ * @size: Size specifier
+ * Return: 1 or 2;
+ */
+int handle_print(const char *fmt, int *ind, va_list list, char buffer[],
+	int flags, int width, int precision, int size)
 {
-    va_list args;
-    int count = 0;
-    char buffer[1024];
-    int buffer_index = 0;
-    int flag_plus = 0;
-    int flag_space = 0;
-    int flag_hash = 0;
-    int length_modifier = 0;
+	int i, unknow_len = 0, printed_chars = -1;
+	fmt_t fmt_types[] = {
+		{'c', print_char}, {'s', print_string}, {'%', print_percent},
+		{'i', print_int}, {'d', print_int}, {'b', print_binary},
+		{'u', print_unsigned}, {'o', print_octal}, {'x', print_hexadecimal},
+		{'X', print_hexa_upper}, {'p', print_pointer}, {'S', print_non_printable},
+		{'r', print_reverse}, {'R', print_rot13string}, {'\0', NULL}
+	};
 
-    va_start(args, format);
+	for (i = 0; fmt_types[i].fmt != '\0'; i++)
 
-    while (*format != '\0') {
-        if (*format == '%') {
-            format++;  // skip '%'
+		if (fmt[*ind] == fmt_types[i].fmt)
 
-            // Handle flags
-            flag_plus = 0;
-            flag_space = 0;
-            flag_hash = 0;
-            while (1) {
-                if (*format == '+') {
-                    flag_plus = 1;
-                } else if (*format == ' ') {
-                    flag_space = 1;
-                } else if (*format == '#') {
-                    flag_hash = 1;
-                } else {
-                    break;
-                }
-                format++;
-            }
+			return (fmt_types[i].fn(list, buffer, flags, width, precision, size));
 
-            // Handle length modifiers
-            if (*format == 'l') {
-                length_modifier = 1;
-                format++;
-            } else if (*format == 'h') {
-                length_modifier = -1;
-                format++;
-            } else {
-                length_modifier = 0;
-            }
+	if (fmt_types[i].fmt == '\0')
 
-            // Handle conversion specifier
-            if (*format == 'd' || *format == 'i') {
-                int value;
-                if (length_modifier == 1) {
-                    value = va_arg(args, long);
-                } else if (length_modifier == -1) {
-                    value = (short)va_arg(args, int);
-                } else {
-                    value = va_arg(args, int);
-                }
-                buffer_index += sprintf(&buffer[buffer_index], "%+d", value);
-            } else if (*format == 'u') {
-                unsigned int value;
-                if (length_modifier == 1) {
-                    value = va_arg(args, unsigned long);
-                } else if (length_modifier == -1) {
-                    value = (unsigned short)va_arg(args, unsigned int);
-                } else {
-                    value = va_arg(args, unsigned int);
-                }
-                buffer_index += sprintf(&buffer[buffer_index], "%u", value);
-            } else if (*format == 'o') {
-                unsigned int value;
-                if (length_modifier == 1) {
-                    value = va_arg(args, unsigned long);
-                } else if (length_modifier == -1) {
-                    value = (unsigned short)va_arg(args, unsigned int);
-                } else {
-                    value = va_arg(args, unsigned int);
-                }
-                if (flag_hash) {
-                    buffer_index += sprintf(&buffer[buffer_index], "0%o", value);
-                } else {
-                    buffer_index += sprintf(&buffer[buffer_index], "%o", value);
-                }
-            } else if (*format == 'x' || *format == 'X') {
-                unsigned int value;
-                if (length_modifier == 1) {
-                    value = va_arg(args, unsigned long);
-                } else if (length_modifier == -1) {
-                    value = (unsigned short)va_arg(args, unsigned int);
-                } else {
-                    value = va_arg(args, unsigned int);
-                }
-                if (*format == 'x') {
-                    if (flag_hash) {
-                        buffer_index += sprintf(&buffer[buffer_index], "0x%x", value);
-                    } else {
-                        buffer_index += sprintf(&buffer[buffer_index], "%x", value);
-                    }
-                } else {
-                    if (flag_hash) {
-                        buffer_index += sprintf(&buffer[buffer_index], "0X%X", value);
-                    } else {
-                        buffer_index += sprintf(&buffer[buffer_index], "%X", value);
-                    }
-                }
-            }
+	{
+		if (fmt[*ind] == '\0')
+			return (-1);
+		unknow_len += write(1, "%%", 1);
 
-            format++;  // skip conversion specifier
-        } else {
-            buffer[buffer_index++] = *format++;
-        }
+		if (fmt[*ind - 1] == ' ')
+			unknow_len += write(1, " ", 1);
 
-        // Flush buffer if necessary
-        if (buffer_index >= sizeof(buffer) - 1) {
-            write(STDOUT_FILENO, buffer, buffer_index);
-            count += buffer_index;
-            buffer_index = 0;
-        }
-    }
+		else if (width)
+		{
+			--(*ind);
 
-    // Flush remaining buffer
-    if (buffer_index > 0) {
-        write(STDOUT_FILENO, buffer, buffer_index);
-        count += buffer_index;
-    }
+			while (fmt[*ind] != ' ' && fmt[*ind] != '%')
+				--(*ind);
 
-    va_end(args);
+			if (fmt[*ind] == ' ')
+				--(*ind);
 
-    return count;
+			return (1);
+		}
+		unknow_len += write(1, &fmt[*ind], 1);
+
+		return (unknow_len);
+	}
+
+	return (printed_chars);
 }
