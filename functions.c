@@ -1,19 +1,6 @@
 #include <stdarg.h>
 #include <unistd.h>
-
 #define BUFF_SIZE 1024
-
-int handle_write_char(char c, char buffer[], int flags, int width, int precision, int size) {
-    // implementation
-}
-
-long int convert_size_number(long int n, int size) {
-    // implementation
-}
-
-int write_number(int is_negative, int i, char buffer[], int flags, int width, int precision, int size) {
-    // implementation
-}
 
 /************************* PRINT CHAR *************************/
 
